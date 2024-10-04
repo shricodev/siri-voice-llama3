@@ -1,7 +1,6 @@
 import os
 import re
 import time
-from datetime import datetime
 from typing import List
 
 import google.generativeai as genai
@@ -11,7 +10,7 @@ from faster_whisper import WhisperModel
 from groq import Groq
 from groq.types.chat import ChatCompletionMessageParam
 from openai import OpenAI
-from PIL import Image, ImageGrab
+from PIL import Image
 
 import clipboard
 import utils
@@ -19,16 +18,32 @@ import webcam
 
 
 class Siri:
+    """
+    A multi-modal AI voice assistant that responds to user prompts
+    by processing voice commands and context from images or clipboard content.
+    """
+
     def __init__(
         self, groq_api_key: str, google_gen_ai_api_key: str, openai_api_key: str
     ) -> None:
+        """
+        Initializes the Siri assistant with API clients for Groq, OpenAI, and Google Generative AI.
+
+        Args:
+            groq_api_key (str): API key for Groq.
+            google_gen_ai_api_key (str): API key for Google Generative AI.
+            openai_api_key (str): API key for OpenAI.
+        """
+
         self.groq_client = Groq(api_key=groq_api_key)
         self.openai_client = OpenAI(api_key=openai_api_key)
 
+        # Configure Google Generative AI model
         genai_generation_config = genai.GenerationConfig(
             temperature=0.7, top_p=1, top_k=1, max_output_tokens=2048
         )
         genai.configure(api_key=google_gen_ai_api_key)
+
         self.genai_model = genai.GenerativeModel(
             "gemini-1.5-flash-latest",
             generation_config=genai_generation_config,
@@ -46,6 +61,7 @@ class Siri:
             ],
         )
 
+        # Initialize conversation context for the AI
         self.conversation: List[ChatCompletionMessageParam] = [
             {
                 "role": "user",
@@ -61,6 +77,7 @@ class Siri:
 
         total_cpu_cores = os.cpu_count() or 1
 
+        # Initialize the audio transcription model
         self.audio_transcription_model = WhisperModel(
             device="cpu",
             compute_type="int8",
@@ -69,15 +86,36 @@ class Siri:
             num_workers=total_cpu_cores // 2,
         )
 
+        # Initialize speech recognition components
         self.speech_recognizer = sr.Recognizer()
         self.mic_audio_source = sr.Microphone()
         self.wake_word = "siri"
 
     def transcribe_audio_to_text(self, audio_path: str) -> str:
+        """
+        Transcribes audio from a file to text.
+
+        Args:
+            audio_path (str): Path to the audio file.
+
+        Returns:
+            str: The transcribed text from the audio.
+        """
+
         segments, _ = self.audio_transcription_model.transcribe(audio_path)
         return "".join(segment.text for segment in segments)
 
     def extract_prompt(self, transcribed_text: str) -> str | None:
+        """
+        Extracts the user's prompt from the transcribed text after the wake word.
+
+        Args:
+            transcribed_text (str): The transcribed text from audio input.
+
+        Returns:
+            str | None: The extracted prompt if found, otherwise None.
+        """
+
         pattern = rf"\b{re.escape(self.wake_word)}[\s,.?!]*([A-Za-z0-9].*)"
         regex_match = re.search(
             pattern=pattern, string=transcribed_text, flags=re.IGNORECASE
@@ -89,6 +127,10 @@ class Siri:
         return regex_match.group(1).strip()
 
     def start_listening(self) -> None:
+        """
+        Starts listening for the wake word and processes audio input in the background.
+        """
+
         with self.mic_audio_source as mic:
             self.speech_recognizer.adjust_for_ambient_noise(source=mic, duration=2)
 
@@ -105,6 +147,17 @@ class Siri:
     def generate_chat_response_with_groq(
         self, prompt: str, image_context: str | None
     ) -> str:
+        """
+        Generates a response from the Groq model based on user input and optional image context.
+
+        Args:
+            prompt (str): The user's prompt.
+            image_context (str | None): Optional image context for the response.
+
+        Returns:
+            str: The generated response from the assistant.
+        """
+
         if image_context:
             prompt = f"USER_PROMPT: {prompt}\n\nIMAGE_CONTEXT: {image_context}"
 
@@ -121,6 +174,13 @@ class Siri:
         return ai_response or "Sorry, I'm not sure how to respond to that."
 
     def text_to_speech(self, text: str) -> None:
+        """
+        Converts text to speech using OpenAI's text-to-speech API.
+
+        Args:
+            text (str): The text to convert to speech.
+        """
+
         stream = pyaudio.PyAudio().open(
             format=pyaudio.paInt16, channels=1, rate=24000, output=True
         )
@@ -139,6 +199,16 @@ class Siri:
                     stream_start = True
 
     def select_assistant_action(self, prompt: str) -> str:
+        """
+        Determines the appropriate action for the assistant to take based on user input.
+
+        Args:
+            prompt (str): The user's prompt.
+
+        Returns:
+            str: The selected action for the assistant.
+        """
+
         system_prompt_message = (
             "You are an AI model tasked with selecting the most appropriate action for a voice assistant. Based on the user's prompt, "
             "choose one of the following actions: ['extract clipboard', 'take screenshot', 'delete screenshot', 'capture webcam', 'None']. "
@@ -159,25 +229,18 @@ class Siri:
 
         return ai_response or "None"
 
-    def capture_screenshot(self) -> str:
-        screenshot_folder_path = utils.get_path_to_folder(folder_type="screenshot")
-
-        if not os.path.exists(screenshot_folder_path):
-            os.makedirs(screenshot_folder_path)
-
-        screen = ImageGrab.grab()
-
-        time_stamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        rgb_screenshot = screen.convert("RGB")
-
-        image_filename = f"screenshot_{time_stamp}.png"
-        image_file_path = os.path.join(screenshot_folder_path, image_filename)
-
-        rgb_screenshot.save(image_file_path, quality=20)
-
-        return image_file_path
-
     def analyze_image_prompt(self, prompt: str, image_path: str) -> str:
+        """
+        Analyzes an image based on the user prompt to extract semantic information.
+
+        Args:
+            prompt (str): The user's prompt related to the image.
+            image_path (str): The path to the image file.
+
+        Returns:
+            str: The analysis result from the image based on the prompt.
+        """
+
         image = Image.open(image_path)
         prompt = (
             "You are an image analysis AI tasked with extracting semantic meaning from images to assist another AI in "
@@ -189,6 +252,14 @@ class Siri:
         return genai_response.text
 
     def handle_audio_processing(self, recognizer, audio):
+        """
+        Callback function to process audio input once recognized.
+
+        Args:
+            recognizer: The speech recognizer instance.
+            audio: The audio data captured by the microphone.
+        """
+
         audio_prompt_file_path = "prompt.wav"
         with open(audio_prompt_file_path, "wb") as f:
             f.write(audio.get_wav_data())
@@ -205,7 +276,7 @@ class Siri:
             )
 
             if "take screenshot" in selected_assistant_action:
-                image_path = self.capture_screenshot()
+                image_path = utils.capture_screenshot()
                 image_analysis_result = self.analyze_image_prompt(
                     prompt=parsed_prompt, image_path=image_path
                 )

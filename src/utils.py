@@ -1,7 +1,10 @@
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Literal, NoReturn
+
+from PIL import ImageGrab
 
 import utils
 
@@ -17,6 +20,32 @@ def exit_program(status_code: int = 0, message: str = "") -> NoReturn:
     if message:
         print(f"ERROR: {message}\n")
     sys.exit(status_code)
+
+
+def capture_screenshot() -> str:
+    """
+    Captures a screenshot and saves it to the designated folder.
+
+    Returns:
+        str: The file path of the saved screenshot.
+    """
+
+    screenshot_folder_path = utils.get_path_to_folder(folder_type="screenshot")
+
+    if not os.path.exists(screenshot_folder_path):
+        os.makedirs(screenshot_folder_path)
+
+    screen = ImageGrab.grab()
+
+    time_stamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    rgb_screenshot = screen.convert("RGB")
+
+    image_filename = f"screenshot_{time_stamp}.png"
+    image_file_path = os.path.join(screenshot_folder_path, image_filename)
+
+    rgb_screenshot.save(image_file_path, quality=20)
+
+    return image_file_path
 
 
 def remove_last_screenshot() -> None:
