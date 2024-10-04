@@ -2,11 +2,52 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Literal, NoReturn
+from typing import Literal, NoReturn, Optional
 
 from PIL import ImageGrab
 
 import utils
+
+
+def create_log_file_for_today(project_root_folder: str) -> str:
+    today = datetime.today()
+
+    # The year is always 4 digit and the month, day is always 2 digit using this format.
+    year = today.strftime("%Y")
+    month = today.strftime("%m")
+    day = today.strftime("%d")
+
+    base_folder = os.path.join(project_root_folder, "data", "chat_history", year, month)
+
+    os.makedirs(base_folder, exist_ok=True)
+    chat_log_file = os.path.join(base_folder, f"{day}.log")
+
+    if not os.path.exists(chat_log_file):
+        with open(chat_log_file, "w") as log_file:
+            log_file.write("")
+
+    return os.path.abspath(chat_log_file)
+
+
+def log_chat_message(
+    log_file_path: str,
+    user_message: Optional[str] = None,
+    ai_message: Optional[str] = None,
+) -> None:
+    # If neither of the message is given, return.
+    if not user_message and not ai_message:
+        return
+
+    timestamp = datetime.now().strftime("[%H : %M]")
+
+    with open(log_file_path, "a") as log_file:
+        if user_message:
+            log_file.write(f"{timestamp} - USER: {user_message}")
+
+        if ai_message:
+            log_file.write(f"{timestamp} - ASSISTANT: {ai_message}\n")
+
+        log_file.write("\n")
 
 
 def exit_program(status_code: int = 0, message: str = "") -> NoReturn:
@@ -17,6 +58,7 @@ def exit_program(status_code: int = 0, message: str = "") -> NoReturn:
         status_code (int): The exit status code. Defaults to 0 (success).
         message (str): An optional error message to display before exiting.
     """
+
     if message:
         print(f"ERROR: {message}\n")
     sys.exit(status_code)
@@ -55,6 +97,7 @@ def remove_last_screenshot() -> None:
     The function checks if the folder exists and if there are any .png files. If
     found, it deletes the most recently created screenshot.
     """
+
     folder_path = utils.get_path_to_folder(folder_type="screenshot")
 
     if not os.path.exists(folder_path):
@@ -85,6 +128,7 @@ def get_path_to_folder(folder_type: Literal["webcam", "screenshot"]) -> str:
     Returns:
         str: The path to the specified folder.
     """
+
     base_path = os.path.join(Path.home(), "Pictures", "llama3.1")
 
     if folder_type == "screenshot":

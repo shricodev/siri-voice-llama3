@@ -24,7 +24,11 @@ class Siri:
     """
 
     def __init__(
-        self, groq_api_key: str, google_gen_ai_api_key: str, openai_api_key: str
+        self,
+        log_file_path: str,
+        groq_api_key: str,
+        google_gen_ai_api_key: str,
+        openai_api_key: str,
     ) -> None:
         """
         Initializes the Siri assistant with API clients for Groq, OpenAI, and Google Generative AI.
@@ -34,6 +38,7 @@ class Siri:
             google_gen_ai_api_key (str): API key for Google Generative AI.
             openai_api_key (str): API key for OpenAI.
         """
+        self.log_file_path = log_file_path
 
         self.groq_client = Groq(api_key=groq_api_key)
         self.openai_client = OpenAI(api_key=openai_api_key)
@@ -70,6 +75,7 @@ class Siri:
                     "for context, which has already been processed into a detailed text prompt. This will be attached to their transcribed "
                     "voice input. Generate the most relevant and factual response by carefully considering all previously generated text "
                     "before adding new information. Do not expect or request additional images; use the provided context if available. "
+                    "Please do not include newlines in your response. Keep it all in one paragraph. "
                     "Ensure your responses are clear, concise, and relevant to the ongoing conversation, avoiding any unnecessary verbosity."
                 ),
             }
@@ -126,16 +132,13 @@ class Siri:
 
         return regex_match.group(1).strip()
 
-    def start_listening(self) -> None:
+    def listen(self) -> None:
         """
         Starts listening for the wake word and processes audio input in the background.
         """
 
         with self.mic_audio_source as mic:
             self.speech_recognizer.adjust_for_ambient_noise(source=mic, duration=2)
-
-        print("LISTENING...\n")
-        print("SAY THE WAKE WORD WITH YOUR PROMPT\n")
 
         self.speech_recognizer.listen_in_background(
             source=self.mic_audio_source, callback=self.handle_audio_processing
@@ -225,6 +228,7 @@ class Siri:
         )
 
         ai_response = completion.choices[0].message.content
+        # TODO: Remove this print statement after debugging.
         print(f"TASK: {ai_response}\n")
 
         return ai_response or "None"
@@ -260,7 +264,11 @@ class Siri:
             audio: The audio data captured by the microphone.
         """
 
-        audio_prompt_file_path = "prompt.wav"
+        data_folder_path = os.path.abspath(os.path.join(".", "data"))
+        if not os.path.exists(data_folder_path):
+            os.makedirs(data_folder_path)
+
+        audio_prompt_file_path = os.path.join(data_folder_path, "user_audio_prompt.wav")
         with open(audio_prompt_file_path, "wb") as f:
             f.write(audio.get_wav_data())
 
@@ -270,7 +278,11 @@ class Siri:
         parsed_prompt = self.extract_prompt(transcribed_text=transcribed_text)
 
         if parsed_prompt:
-            print(f"USER: {parsed_prompt}\n")
+            utils.log_chat_message(
+                log_file_path=self.log_file_path, user_message=parsed_prompt
+            )
+            skip_response = False
+
             selected_assistant_action = self.select_assistant_action(
                 prompt=parsed_prompt
             )
@@ -284,6 +296,8 @@ class Siri:
             elif "delete screenshot" in selected_assistant_action:
                 utils.remove_last_screenshot()
                 image_analysis_result = None
+                self.text_to_speech(text="Screenshot deleted successfully.")
+                skip_response = True
 
             elif "capture webcam" in selected_assistant_action:
                 image_path = webcam.capture_webcam_image()
@@ -301,8 +315,12 @@ class Siri:
             else:
                 image_analysis_result = None
 
-            response = self.generate_chat_response_with_groq(
-                prompt=parsed_prompt, image_context=image_analysis_result
-            )
-            print(f"ASSISTANT: {response}\n")
-            self.text_to_speech(text=response)
+            # If the response is not supposed to be skipped, then generate the response and speak it out.
+            if not skip_response:
+                response = self.generate_chat_response_with_groq(
+                    prompt=parsed_prompt, image_context=image_analysis_result
+                )
+                utils.log_chat_message(
+                    log_file_path=self.log_file_path, ai_message=response
+                )
+                self.text_to_speech(text=response)

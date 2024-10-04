@@ -4,7 +4,7 @@ import sys
 # Add the src directory to the module search path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
-from src import setup, siri
+from src import setup, siri, utils
 
 """
 Main entry point for the AI llama3 siri voice assitant.
@@ -19,13 +19,21 @@ To run the application, execute this script in an environment where the
 """
 
 if __name__ == "__main__":
+    # Determine the current directory of the script
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    chat_log_file_path = utils.create_log_file_for_today(
+        project_root_folder=current_dir
+    )
+
     all_api_keys = setup.get_credentials()
     groq_api_key, google_gen_ai_api_key, openai_api_key = all_api_keys
 
     siri = siri.Siri(
+        log_file_path=chat_log_file_path,
         groq_api_key=groq_api_key,
         google_gen_ai_api_key=google_gen_ai_api_key,
         openai_api_key=openai_api_key,
     )
 
-    siri.start_listening()
+    siri.listen()

@@ -5,6 +5,9 @@ venv
 # Pycache
 __pycache__
 
+data/chat_history/**
+data/**.wav
+
 # Environment Variables
 .env.local
 .env
