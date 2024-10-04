@@ -141,7 +141,7 @@ class Siri:
     def select_assistant_action(self, prompt: str) -> str:
         system_prompt_message = (
             "You are an AI model tasked with selecting the most appropriate action for a voice assistant. Based on the user's prompt, "
-            "choose one of the following actions: ['extract clipboard', 'take screenshot', 'capture webcam', 'None']. "
+            "choose one of the following actions: ['extract clipboard', 'take screenshot', 'delete screenshot', 'capture webcam', 'None']. "
             "Assume the webcam is a standard laptop webcam facing the user. Provide only the action without explanations or additional text. "
             "Respond strictly with the most suitable option from the list."
         )
@@ -209,6 +209,10 @@ class Siri:
                 image_analysis_result = self.analyze_image_prompt(
                     prompt=parsed_prompt, image_path=image_path
                 )
+
+            elif "delete screenshot" in selected_assistant_action:
+                utils.remove_last_screenshot()
+                image_analysis_result = None
 
             elif "capture webcam" in selected_assistant_action:
                 image_path = webcam.capture_webcam_image()
