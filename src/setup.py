@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import utils
 
 
-def get_credentials() -> tuple[str, str, str]:
+def get_credentials() -> tuple[str, str, str | None]:
     """
     Load API keys from environment variables and return them as a tuple.
 
@@ -27,10 +27,10 @@ def get_credentials() -> tuple[str, str, str]:
     google_gen_ai_api_key: str | None = os.getenv("GOOGLE_GENERATIVE_AI_API_KEY")
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
 
-    if groq_api_key is None or google_gen_ai_api_key is None or openai_api_key is None:
+    if groq_api_key is None or google_gen_ai_api_key is None:
         return utils.exit_program(
             status_code=1,
-            message="Missing API key(s). Make sure to set all of them in `.env` file.",
+            message="Missing required API key(s). Make sure to set them in `.env` file. If you are using the OpenAI approach, then populate the OpenAI api key as well.",
         )
 
     return groq_api_key, google_gen_ai_api_key, openai_api_key

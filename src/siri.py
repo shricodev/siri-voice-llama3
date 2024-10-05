@@ -30,7 +30,7 @@ class Siri:
         project_root_folder: str,
         groq_api_key: str,
         google_gen_ai_api_key: str,
-        openai_api_key: str,
+        openai_api_key: str | None,
     ) -> None:
         """
         Initializes the Siri assistant with API clients for Groq, OpenAI, and Google Generative AI.
