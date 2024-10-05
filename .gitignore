@@ -5,8 +5,9 @@ venv
 # Pycache
 __pycache__
 
-data/chat_history/**
-data/**.wav
+data/chat_history/**/*.log
+data/ai_response/*.mp3
+data/*.wav
 
 # Environment Variables
 .env.local

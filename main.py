@@ -20,10 +20,10 @@ To run the application, execute this script in an environment where the
 
 if __name__ == "__main__":
     # Determine the current directory of the script
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root_folder = os.path.dirname(os.path.abspath(__file__))
 
-    chat_log_file_path = utils.create_log_file_for_today(
-        project_root_folder=current_dir
+    chat_log_file_path = utils.get_log_file_for_today(
+        project_root_folder=project_root_folder
     )
 
     all_api_keys = setup.get_credentials()
@@ -31,6 +31,7 @@ if __name__ == "__main__":
 
     siri = siri.Siri(
         log_file_path=chat_log_file_path,
+        project_root_folder=project_root_folder,
         groq_api_key=groq_api_key,
         google_gen_ai_api_key=google_gen_ai_api_key,
         openai_api_key=openai_api_key,

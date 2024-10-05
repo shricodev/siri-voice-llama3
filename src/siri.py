@@ -4,15 +4,16 @@ import time
 from typing import List
 
 import google.generativeai as genai
-import pyaudio
 import speech_recognition as sr
 from faster_whisper import WhisperModel
 from groq import Groq
 from groq.types.chat import ChatCompletionMessageParam
+from gtts import gTTS
 from openai import OpenAI
 from PIL import Image
+from pydub import AudioSegment
+from pydub.playback import play
 
-import clipboard
 import utils
 import webcam
 
@@ -26,6 +27,7 @@ class Siri:
     def __init__(
         self,
         log_file_path: str,
+        project_root_folder: str,
         groq_api_key: str,
         google_gen_ai_api_key: str,
         openai_api_key: str,
@@ -34,11 +36,14 @@ class Siri:
         Initializes the Siri assistant with API clients for Groq, OpenAI, and Google Generative AI.
 
         Args:
+            log_file_path (str): Path to the log file.
+            project_root_folder (str): Root folder of the project.
             groq_api_key (str): API key for Groq.
             google_gen_ai_api_key (str): API key for Google Generative AI.
             openai_api_key (str): API key for OpenAI.
         """
         self.log_file_path = log_file_path
+        self.project_root_folder = project_root_folder
 
         self.groq_client = Groq(api_key=groq_api_key)
         self.openai_client = OpenAI(api_key=openai_api_key)
@@ -184,22 +189,59 @@ class Siri:
             text (str): The text to convert to speech.
         """
 
-        stream = pyaudio.PyAudio().open(
-            format=pyaudio.paInt16, channels=1, rate=24000, output=True
+        # USAGE: OpenAI approach (Use this if you have credits in your OpenAI account)
+
+        # stream = pyaudio.PyAudio().open(
+        #     format=pyaudio.paInt16, channels=1, rate=24000, output=True
+        # )
+        # stream_start = False
+        #
+        # with self.openai_client.audio.speech.with_streaming_response.create(
+        #     model="tts-1", voice="nova", response_format="pcm", input=text
+        # ) as openai_response:
+        #     silence_threshold = 0.1
+        #     for chunk in openai_response.iter_bytes(chunk_size=1024):
+        #         if stream_start:
+        #             stream.write(chunk)
+        #
+        #         elif max(chunk) > silence_threshold:
+        #             stream.write(chunk)
+        #             stream_start = True
+
+        # USAGE: Pyttsx3 approach (Weak audio quality)
+
+        # self.engine.setProperty("volume", 1.0)
+        # self.engine.setProperty("rate", 125)
+        #
+        # voices = self.engine.getProperty("voices")
+        # self.engine.setProperty("voice", voices[0].id)
+        #
+        # self.engine.say(text)
+        # self.engine.runAndWait()
+        #
+        # self.engine.stop()
+
+        # gTTS approach (Stronger audio quality with Google TTS engine)
+        # DOWNSIDE: There is a need to save it as `.mp3` and play it.
+        tts = gTTS(text=text, lang="en")
+
+        response_folder_path = os.path.abspath(
+            os.path.join(self.project_root_folder, "data", "ai_response")
         )
-        stream_start = False
 
-        with self.openai_client.audio.speech.with_streaming_response.create(
-            model="tts-1", voice="nova", response_format="pcm", input=text
-        ) as openai_response:
-            silence_threshold = 0.1
-            for chunk in openai_response.iter_bytes(chunk_size=1024):
-                if stream_start:
-                    stream.write(chunk)
+        os.makedirs(response_folder_path, exist_ok=True)
 
-                elif max(chunk) > silence_threshold:
-                    stream.write(chunk)
-                    stream_start = True
+        response_audio_file_path = os.path.join(
+            response_folder_path, "ai_response_audio.mp3"
+        )
+        tts.save(response_audio_file_path)
+
+        response_audio = AudioSegment.from_mp3(response_audio_file_path)
+        play(response_audio)
+
+        # After the audio is played, delete the audio file.
+        if os.path.exists(response_audio_file_path):
+            os.remove(response_audio_file_path)
 
     def select_assistant_action(self, prompt: str) -> str:
         """
@@ -265,10 +307,11 @@ class Siri:
         """
 
         data_folder_path = os.path.abspath(os.path.join(".", "data"))
-        if not os.path.exists(data_folder_path):
-            os.makedirs(data_folder_path)
+        os.makedirs(data_folder_path, exist_ok=True)
 
-        audio_prompt_file_path = os.path.join(data_folder_path, "user_audio_prompt.wav")
+        audio_prompt_file_path = os.path.abspath(
+            os.path.join(data_folder_path, "user_audio_prompt.wav")
+        )
         with open(audio_prompt_file_path, "wb") as f:
             f.write(audio.get_wav_data())
 
@@ -306,7 +349,7 @@ class Siri:
                 )
 
             elif "extract clipboard" in selected_assistant_action:
-                clipboard_content = clipboard.get_clipboard_text()
+                clipboard_content = utils.get_clipboard_text()
                 parsed_prompt = (
                     f"{parsed_prompt}\n\nCLIPBOARD_CONTENT: {clipboard_content}"
                 )
@@ -324,3 +367,7 @@ class Siri:
                     log_file_path=self.log_file_path, ai_message=response
                 )
                 self.text_to_speech(text=response)
+
+        # Remove the user prompt audio after the response is generated.
+        if os.path.exists(audio_prompt_file_path):
+            os.remove(audio_prompt_file_path)

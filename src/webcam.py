@@ -19,6 +19,7 @@ def get_available_webcam() -> cv2.VideoCapture | None:
         cv2.VideoCapture: The opened webcam object.
         None: If no webcam is found, the program exits with an error message.
     """
+
     # Assuming that we are checking the first 10 webcams.
     for index in range(10):
         web_cam = cv2.VideoCapture(index)
@@ -41,6 +42,7 @@ def capture_webcam_image() -> Union[str, NoReturn]:
         str: The file path of the saved image.
         NoReturn: If there was an error capturing the image, the program exits with an error message.
     """
+
     webcam = get_available_webcam()
     if webcam is None or not webcam.isOpened():
         return utils.exit_program(
@@ -49,8 +51,7 @@ def capture_webcam_image() -> Union[str, NoReturn]:
 
     webcam_folder_path = utils.get_path_to_folder(folder_type="webcam")
 
-    if not os.path.exists(webcam_folder_path):
-        os.makedirs(webcam_folder_path)
+    os.makedirs(webcam_folder_path, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     image_filename = f"webcam_{timestamp}.png"
