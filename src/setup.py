@@ -14,7 +14,7 @@ def get_credentials() -> tuple[str, str, str | None]:
     If any of the keys are missing, it exits the program with an error message.
 
     Returns:
-        tuple[str, str, str]: A tuple containing the Groq API key, Google Generative AI API key,
+        tuple[str, str, str | None]: A tuple containing the Groq API key, Google Generative AI API key,
                               and OpenAI API key.
 
     Raises:
@@ -22,7 +22,6 @@ def get_credentials() -> tuple[str, str, str | None]:
     """
     load_dotenv()
 
-    # Get the username and password from the environment variables:
     groq_api_key: str | None = os.getenv("GROQ_API_KEY")
     google_gen_ai_api_key: str | None = os.getenv("GOOGLE_GENERATIVE_AI_API_KEY")
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")

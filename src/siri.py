@@ -1,9 +1,11 @@
 import os
 import re
 import time
+from pathlib import Path
 from typing import List
 
 import google.generativeai as genai
+import pyttsx3
 import speech_recognition as sr
 from faster_whisper import WhisperModel
 from groq import Groq
@@ -26,8 +28,10 @@ class Siri:
 
     def __init__(
         self,
-        log_file_path: str,
-        project_root_folder: str,
+        # Needed in case you want to use the Pyttsx3 engine for TTS generation.
+        pyttsx3_engine: pyttsx3.Engine,
+        log_file_path: Path,
+        project_root_folder_path: Path,
         groq_api_key: str,
         google_gen_ai_api_key: str,
         openai_api_key: str | None,
@@ -36,14 +40,17 @@ class Siri:
         Initializes the Siri assistant with API clients for Groq, OpenAI, and Google Generative AI.
 
         Args:
-            log_file_path (str): Path to the log file.
-            project_root_folder (str): Root folder of the project.
+            pyttsx3_engine (pyttsx3.Engine): Pyttsx3 engine for TTS generation.
+            log_file_path (Path): Path to the log file.
+            project_root_folder_path (Path): Root folder of the project.
             groq_api_key (str): API key for Groq.
             google_gen_ai_api_key (str): API key for Google Generative AI.
             openai_api_key (str): API key for OpenAI.
         """
         self.log_file_path = log_file_path
-        self.project_root_folder = project_root_folder
+        self.project_root_folder_path = project_root_folder_path
+
+        self.pyttsx3_engine = pyttsx3_engine
 
         self.groq_client = Groq(api_key=groq_api_key)
         self.openai_client = OpenAI(api_key=openai_api_key)
@@ -102,18 +109,20 @@ class Siri:
         self.mic_audio_source = sr.Microphone()
         self.wake_word = "siri"
 
-    def transcribe_audio_to_text(self, audio_path: str) -> str:
+    def transcribe_audio_to_text(self, audio_file_path: Path) -> str:
         """
         Transcribes audio from a file to text.
 
         Args:
-            audio_path (str): Path to the audio file.
+            audio_file_path (Path): Path to the audio file.
 
         Returns:
             str: The transcribed text from the audio.
         """
 
-        segments, _ = self.audio_transcription_model.transcribe(audio_path)
+        segments, _ = self.audio_transcription_model.transcribe(
+            audio=str(audio_file_path)
+        )
         return "".join(segment.text for segment in segments)
 
     def extract_prompt(self, transcribed_text: str) -> str | None:
@@ -210,30 +219,33 @@ class Siri:
 
         # USAGE: Pyttsx3 approach (Weak audio quality)
 
-        # self.engine.setProperty("volume", 1.0)
-        # self.engine.setProperty("rate", 125)
+        # self.pyttsx3_engine.setProperty("volume", 1.0)
+        # self.pyttsx3_engine.setProperty("rate", 125)
         #
-        # voices = self.engine.getProperty("voices")
-        # self.engine.setProperty("voice", voices[0].id)
+        # voices = self.pyttsx3_engine.getProperty("voices")
+        # self.pyttsx3_engine.setProperty("voice", voices[0].id)
         #
-        # self.engine.say(text)
-        # self.engine.runAndWait()
+        # self.pyttsx3_engine.say(text)
+        # self.pyttsx3_engine.runAndWait()
         #
-        # self.engine.stop()
+        # self.pyttsx3_engine.stop()
 
         # gTTS approach (Stronger audio quality with Google TTS engine)
-        # DOWNSIDE: There is a need to save it as `.mp3` and play it.
-        tts = gTTS(text=text, lang="en")
+        # DOWNSIDE: Super slow. Also, there is a need to save it as `.mp3` and play it.
+        tts = gTTS(text=text, lang="en", slow=False)
 
-        response_folder_path = os.path.abspath(
-            os.path.join(self.project_root_folder, "data", "ai_response")
+        response_folder_path = Path(
+            os.path.abspath(
+                os.path.join(self.project_root_folder_path, "data", "ai_response")
+            )
         )
 
         os.makedirs(response_folder_path, exist_ok=True)
 
-        response_audio_file_path = os.path.join(
-            response_folder_path, "ai_response_audio.mp3"
+        response_audio_file_path = Path(
+            os.path.join(response_folder_path, "ai_response_audio.mp3")
         )
+
         tts.save(response_audio_file_path)
 
         response_audio = AudioSegment.from_mp3(response_audio_file_path)
@@ -256,7 +268,7 @@ class Siri:
 
         system_prompt_message = (
             "You are an AI model tasked with selecting the most appropriate action for a voice assistant. Based on the user's prompt, "
-            "choose one of the following actions: ['extract clipboard', 'take screenshot', 'delete screenshot', 'capture webcam', 'None']. "
+            "choose one of the following actions: ['extract clipboard', 'take screenshot', 'delete screenshot', 'capture webcam', 'generic']. "
             "Assume the webcam is a standard laptop webcam facing the user. Provide only the action without explanations or additional text. "
             "Respond strictly with the most suitable option from the list."
         )
@@ -270,18 +282,16 @@ class Siri:
         )
 
         ai_response = completion.choices[0].message.content
-        # TODO: Remove this print statement after debugging.
-        print(f"TASK: {ai_response}\n")
 
-        return ai_response or "None"
+        return ai_response or "generic"
 
-    def analyze_image_prompt(self, prompt: str, image_path: str) -> str:
+    def analyze_image_prompt(self, prompt: str, image_path: Path) -> str:
         """
         Analyzes an image based on the user prompt to extract semantic information.
 
         Args:
             prompt (str): The user's prompt related to the image.
-            image_path (str): The path to the image file.
+            image_path (Path): The path to the image file.
 
         Returns:
             str: The analysis result from the image based on the prompt.
@@ -306,17 +316,17 @@ class Siri:
             audio: The audio data captured by the microphone.
         """
 
-        data_folder_path = os.path.abspath(os.path.join(".", "data"))
+        data_folder_path = Path(os.path.abspath(os.path.join(".", "data")))
         os.makedirs(data_folder_path, exist_ok=True)
 
-        audio_prompt_file_path = os.path.abspath(
-            os.path.join(data_folder_path, "user_audio_prompt.wav")
+        audio_prompt_file_path = Path(
+            os.path.abspath(os.path.join(data_folder_path, "user_audio_prompt.wav"))
         )
         with open(audio_prompt_file_path, "wb") as f:
             f.write(audio.get_wav_data())
 
         transcribed_text = self.transcribe_audio_to_text(
-            audio_path=audio_prompt_file_path
+            audio_file_path=audio_prompt_file_path
         )
         parsed_prompt = self.extract_prompt(transcribed_text=transcribed_text)
 
@@ -330,7 +340,13 @@ class Siri:
                 prompt=parsed_prompt
             )
 
-            if "take screenshot" in selected_assistant_action:
+            if "capture webcam" in selected_assistant_action:
+                image_path = webcam.capture_webcam_image()
+                image_analysis_result = self.analyze_image_prompt(
+                    prompt=parsed_prompt, image_path=image_path
+                )
+
+            elif "take screenshot" in selected_assistant_action:
                 image_path = utils.capture_screenshot()
                 image_analysis_result = self.analyze_image_prompt(
                     prompt=parsed_prompt, image_path=image_path
@@ -339,14 +355,14 @@ class Siri:
             elif "delete screenshot" in selected_assistant_action:
                 utils.remove_last_screenshot()
                 image_analysis_result = None
-                self.text_to_speech(text="Screenshot deleted successfully.")
-                skip_response = True
+                ai_response = "Screenshot deleted successfully."
+                self.text_to_speech(text=ai_response)
 
-            elif "capture webcam" in selected_assistant_action:
-                image_path = webcam.capture_webcam_image()
-                image_analysis_result = self.analyze_image_prompt(
-                    prompt=parsed_prompt, image_path=image_path
+                utils.log_chat_message(
+                    log_file_path=self.log_file_path, ai_message=ai_response
                 )
+
+                skip_response = True
 
             elif "extract clipboard" in selected_assistant_action:
                 clipboard_content = utils.get_clipboard_text()

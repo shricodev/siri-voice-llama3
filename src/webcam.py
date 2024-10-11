@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import NoReturn, Union
 
 import cv2
@@ -29,7 +30,7 @@ def get_available_webcam() -> cv2.VideoCapture | None:
     return utils.exit_program(status_code=1, message="No webcams found.")
 
 
-def capture_webcam_image() -> Union[str, NoReturn]:
+def capture_webcam_image() -> Union[Path, NoReturn]:
     """
     Captures an image from the available webcam and saves it to the specified folder.
 
@@ -39,7 +40,7 @@ def capture_webcam_image() -> Union[str, NoReturn]:
     and saves the image to the specified folder. The function then releases the webcam.
 
     Returns:
-        str: The file path of the saved image.
+        Path: The file path of the saved image.
         NoReturn: If there was an error capturing the image, the program exits with an error message.
     """
 
@@ -58,10 +59,10 @@ def capture_webcam_image() -> Union[str, NoReturn]:
 
     _, frame = webcam.read()
 
-    image_file_path = os.path.join(webcam_folder_path, image_filename)
+    image_file_path_str = os.path.join(webcam_folder_path, image_filename)
 
-    cv2.imwrite(image_file_path, frame)
+    cv2.imwrite(image_file_path_str, frame)
 
     webcam.release()
 
-    return image_file_path
+    return Path(image_file_path_str)
