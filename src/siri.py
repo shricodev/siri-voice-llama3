@@ -307,13 +307,13 @@ class Siri:
         genai_response = self.genai_model.generate_content([prompt, image])
         return genai_response.text
 
-    def handle_audio_processing(self, recognizer, audio):
+    def handle_audio_processing(self, recognizer: sr.Recognizer, audio: sr.AudioData):
         """
         Callback function to process audio input once recognized.
 
         Args:
-            recognizer: The speech recognizer instance.
-            audio: The audio data captured by the microphone.
+            recognizer (sr.Recognizer): The speech recognizer instance.
+            audio (sr.AudioData): The audio data captured by the microphone.
         """
 
         data_folder_path = Path(os.path.abspath(os.path.join(".", "data")))
