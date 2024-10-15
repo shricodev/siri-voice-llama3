@@ -6,6 +6,7 @@ venv
 __pycache__
 
 data/chat_history/**/*.log
+logs/*.log
 data/ai_response/*.mp3
 data/*.wav
 

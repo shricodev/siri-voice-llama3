@@ -30,6 +30,7 @@ This application may have limitations based on the performance of the underlying
 siri-voice-llama3/
 ├── .git/
 ├── (gitignored) .venv/
+├── logs/
 ├── data/
 │   ├── ai_response/
 │   │   └── .gitkeep
@@ -63,19 +64,6 @@ git clone git@github.com:shricodev/siri-voice-llama3.git
 cd siri-voice-llama3
 ```
 
-- **Create and Activate Virtual Environment**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate.fish # or .venv/bin/activate if you are not using the fish shell
-```
-
-- **Install Dependencies**
-
-```bash
-pip install -r requirements.txt
-```
-
 - **Set Up Environment Variables**
 
 ```bash
@@ -87,6 +75,27 @@ OPENAI_API_KEY=
 ```
 
 You can use the `.env.example` file as a template.
+
+- **Create, Activate Virtual Environment and Run (Automatically)**
+
+```bash
+{shell} src/scripts/start_siri_llama3.{sh/fish} main.py
+```
+
+Change the placeholder `{shell}` to the shell you are using. It can either be `bash` or `fish`.
+
+- **Create and Activate Virtual Environment (Manually)**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate.fish # or .venv/bin/activate if you are not using the fish shell
+```
+
+**Install Dependencies**
+
+```bash
+pip3 install -r requirements.txt
+```
 
 ## 💻 Usage
 
@@ -100,9 +109,19 @@ python main.py
 
 This command initializes the assistant, allowing you to interact via voice commands.
 
+**OR**
+
+```bash
+{shell} src/scripts/start_siri_llama3.{sh/fish} main.py
+```
+
+Change the placeholder `{shell}` to the shell you are using. It can either be `bash` or `fish`.
+
 ## 💬 Logging
 
 The application logs all interactions in the `data/chat_history/` directory. You can review past interactions in the log files to understand the context of your conversations.
+
+Any ERRORS when running with the shell script will be logged in the `logs/` directory.
 
 ## Show your support
 
