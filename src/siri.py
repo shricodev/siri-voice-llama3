@@ -28,8 +28,6 @@ class Siri:
 
     def __init__(
         self,
-        # Needed in case you want to use the Pyttsx3 engine for TTS generation.
-        pyttsx3_engine: pyttsx3.Engine,
         log_file_path: Path,
         project_root_folder_path: Path,
         groq_api_key: str,
@@ -40,7 +38,6 @@ class Siri:
         Initializes the Siri assistant with API clients for Groq, OpenAI, and Google Generative AI.
 
         Args:
-            pyttsx3_engine (pyttsx3.Engine): Pyttsx3 engine for TTS generation.
             log_file_path (Path): Path to the log file.
             project_root_folder_path (Path): Root folder of the project.
             groq_api_key (str): API key for Groq.
@@ -50,7 +47,7 @@ class Siri:
         self.log_file_path = log_file_path
         self.project_root_folder_path = project_root_folder_path
 
-        self.pyttsx3_engine = pyttsx3_engine
+        self.pyttsx3_engine = pyttsx3.init()
 
         self.groq_client = Groq(api_key=groq_api_key)
         self.openai_client = OpenAI(api_key=openai_api_key)
@@ -192,7 +189,7 @@ class Siri:
 
     def text_to_speech(self, text: str) -> None:
         """
-        Converts text to speech using OpenAI's text-to-speech API.
+        Converts text to speech using OpenAI/pyttsx3/gTTS's text-to-speech API.
 
         Args:
             text (str): The text to convert to speech.

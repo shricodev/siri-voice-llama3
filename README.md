@@ -9,6 +9,10 @@
 ![GitHub top language](https://img.shields.io/github/languages/top/shricodev/siri-voice-llama3?style=plastic)
 ![GitHub last commit](https://img.shields.io/github/last-commit/shricodev/siri-voice-llama3?color=red&style=plastic)
 
+## 👀 Check Out My Blog Post on this Project!
+
+> I have a complete blog post explaining the project [here](https://dev.to/shricodev/build-your-personal-siri-with-llama-3-like-a-pro-5h1o).
+
 ## 📚 Overview
 
 The **AI Assistant Automation** is a Python application that uses **Llama3**, **gTTS**, **OpenAI**, **Groq**, and **Faster-Whisper** to create an intelligent assistant similar to **Siri**, with integrated image recognition support. This project allows users to interact with the assistant through voice commands and receive responses in audio format.

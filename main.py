@@ -2,8 +2,6 @@ import os
 import sys
 from pathlib import Path
 
-import pyttsx3
-
 # Add the src directory to the module search path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
@@ -32,10 +30,7 @@ if __name__ == "__main__":
     all_api_keys = setup.get_credentials()
     groq_api_key, google_gen_ai_api_key, openai_api_key = all_api_keys
 
-    pyttsx3_engine = pyttsx3.init()
-
     siri = siri.Siri(
-        pyttsx3_engine=pyttsx3_engine,
         log_file_path=chat_log_file_path,
         project_root_folder_path=project_root_folder_path,
         groq_api_key=groq_api_key,
